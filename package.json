@@ -1,0 +1,27 @@
+{
+  "name": "binancefutures",
+  "version": "1.0.0",
+  "description": "",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "async": "^3.1.0",
+    "express": "^4.17.2",
+    "https-proxy-agent": "^3.0.1",
+    "json-bigint": "^1.0.0",
+    "jsonwebtoken": "^8.5.1",
+    "nedb": "^1.8.0",
+    "request": "^2.88.0",
+    "socks-proxy-agent": "^4.0.2",
+    "string-hash": "^1.1.3",
+    "url": "^0.11.0",
+    "ws": "^7.2.0"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.15"
+  }
+}
