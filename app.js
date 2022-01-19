@@ -28,7 +28,7 @@ app.use(express.json({}))
 app.post('/login', (req, res, next) => {
   let username = req.body.username;
   let password = req.body.password;
-  console.log(username, password)
+  console.log(req.body)
 
   db.admin.findOne({ username, password }, (err, user) => {
     if(user && user.username == username && user.password == password) {
