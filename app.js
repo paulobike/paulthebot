@@ -111,6 +111,7 @@ app.use((error, req, res, next) => {
 });
 
 app.use(express.static('public'))
+app.use('*', express.static('public'))
 
 const server  = http.createServer(app);
 
