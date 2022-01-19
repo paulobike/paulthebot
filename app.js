@@ -26,8 +26,8 @@ app.use(function (req, res, next) {
 app.use(express.json({}))
 
 app.post('/login', (req, res, next) => {
-  let username = req.body.username;
-  let password = req.body.password;
+  let username = req.body.username.toLowerCase();
+  let password = req.body.password.toLowerCase();
   console.log(req.body)
 
   db.admin.findOne({ username, password }, (err, user) => {
