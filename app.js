@@ -27,7 +27,7 @@ app.use(function (req, res, next) {
 });
 app.use(express.json({}))
 
-app.post('/login', (req, res, next) => {
+app.post('/api/login', (req, res, next) => {
   let username = req.body.username.toLowerCase();
   let password = req.body.password;
   console.log(req.body)
@@ -49,7 +49,7 @@ app.post('/login', (req, res, next) => {
   })
 });
 
-app.get('/details', middleware.isLoggedIn, (req, res, next) => {  
+app.get('/api/details', middleware.isLoggedIn, (req, res, next) => {  
   var date = new Date();
   var today = new Date(date.getFullYear(), date.getMonth(), date.getDate());
   today = today.getTime()
@@ -63,7 +63,7 @@ app.get('/details', middleware.isLoggedIn, (req, res, next) => {
   });
 })
 
-app.put('/password', middleware.isLoggedIn, (req, res, next) => {
+app.put('/api/password', middleware.isLoggedIn, (req, res, next) => {
   let password = req.body.password;
   let oldPassword = req.body.oldPassword;
   let username = req.user.username;
@@ -78,7 +78,7 @@ app.put('/password', middleware.isLoggedIn, (req, res, next) => {
   });
 });
 
-app.get('/options', middleware.isLoggedIn, (req, res, next) => {  
+app.get('/api/options', middleware.isLoggedIn, (req, res, next) => {  
   db.options.find({}, (err, docs) => {
     if(err) return next(new Error('Something went wrong'));
     res.json({
@@ -88,7 +88,7 @@ app.get('/options', middleware.isLoggedIn, (req, res, next) => {
   });
 })
 
-app.put('/options', middleware.isLoggedIn, (req, res, next) => {
+app.put('/api/options', middleware.isLoggedIn, (req, res, next) => {
   let name = req.body.name;
   let value = req.body.value;
   db.options.update({name}, { name, value }, (err, doc) => {
@@ -97,7 +97,7 @@ app.put('/options', middleware.isLoggedIn, (req, res, next) => {
   });
 });
 
-app.get('/toggle', middleware.isLoggedIn, async (req, res, next) => {
+app.get('/api/toggle', middleware.isLoggedIn, async (req, res, next) => {
   console.log('running command')
   log('RUNNING COMMAND...');
   try {
@@ -110,7 +110,7 @@ app.get('/toggle', middleware.isLoggedIn, async (req, res, next) => {
   
 });
 
-app.get('/pairs', middleware.isLoggedIn, (req, res, next) => {
+app.get('/api/pairs', middleware.isLoggedIn, (req, res, next) => {
   db.pairs.find({}, (err, docs) => {
     if(err) return next(new Error('Something went wrong'));
     res.json({
@@ -120,7 +120,7 @@ app.get('/pairs', middleware.isLoggedIn, (req, res, next) => {
   });
 });
 
-app.post('/pairs', middleware.isLoggedIn, (req, res, next) => {
+app.post('/api/pairs', middleware.isLoggedIn, (req, res, next) => {
   let symbol = req.body.symbol;
   if(!symbol || typeof symbol != 'string') {
     return next(new Error('Please enter a valid symbol'));
@@ -139,7 +139,7 @@ app.post('/pairs', middleware.isLoggedIn, (req, res, next) => {
   
 });
 
-app.delete('/pairs/:id', middleware.isLoggedIn, (req, res, next) => {
+app.delete('/api/pairs/:id', middleware.isLoggedIn, (req, res, next) => {
   db.pairs.remove({_id: req.params.id}, (err, docs) => {
     if(err) return next(new Error('Something went wrong'));
     res.json({
@@ -149,7 +149,7 @@ app.delete('/pairs/:id', middleware.isLoggedIn, (req, res, next) => {
   });
 });
 
-app.get('/logs', middleware.isLoggedIn, async(req, res, next) => {
+app.get('/api/logs', middleware.isLoggedIn, async(req, res, next) => {
   try {
     let logs = await getLogs();
     res.json({

@@ -104,7 +104,7 @@ function trade () {
     let price = Number.parseFloat(nextPair.price);
     let leverageReq;
     let leverage = nextPair.leverage;
-    leverage = 20;
+    // leverage = 20;
 
     if(!price || !leverage) {
       console.log('SKIPPING TRADE DUE TO NO PRICE OR LEVERAGE LOADED FOR PAIR');
