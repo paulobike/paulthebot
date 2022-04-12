@@ -9,7 +9,9 @@ const jwt        = require('jsonwebtoken');
 const bot        = require('./bot');
 const db         = require('./dataStore');
 const middleware = require('./middleware');
+const { getLogs, log, emitLogs } = require('./logger');
 const app        = express();
+const { Server }         = require('socket.io');
 
 app.use(function (req, res, next) {
 
@@ -97,16 +99,80 @@ app.put('/options', middleware.isLoggedIn, (req, res, next) => {
 
 app.get('/toggle', middleware.isLoggedIn, async (req, res, next) => {
   console.log('running command')
-  if(!bot.getIsRunning()) await bot.init();
-  else bot.sleep();
-  res.json({message :'OK', status: 200});
+  log('RUNNING COMMAND...');
+  try {
+    if(!bot.getIsRunning()) await bot.init();
+    else bot.sleep();
+    res.json({message :'OK', status: 200});
+  } catch (err) {
+    next(new Error(err));
+  }
+  
+});
+
+app.get('/pairs', middleware.isLoggedIn, (req, res, next) => {
+  db.pairs.find({}, (err, docs) => {
+    if(err) return next(new Error('Something went wrong'));
+    res.json({
+      pairs: docs,
+      status: 200
+    });
+  });
+});
+
+app.post('/pairs', middleware.isLoggedIn, (req, res, next) => {
+  let symbol = req.body.symbol;
+  if(!symbol || typeof symbol != 'string') {
+    return next(new Error('Please enter a valid symbol'));
+  }
+  symbol = symbol.toUpperCase();
+  db.pairs.findOne({symbol}, (err, pair) => {
+    if(pair) return next(new Error('Symbol already exists'));
+    db.pairs.insert({symbol, inTrade: false}, (err, docs) => {
+      if(err) return next(new Error('Something went wrong'));
+      res.json({
+        message: 'ok',
+        status: 200
+      });
+    });
+  })
+  
+});
+
+app.delete('/pairs/:id', middleware.isLoggedIn, (req, res, next) => {
+  db.pairs.remove({_id: req.params.id}, (err, docs) => {
+    if(err) return next(new Error('Something went wrong'));
+    res.json({
+      message: 'ok',
+      status: 200
+    });
+  });
+});
+
+app.get('/logs', middleware.isLoggedIn, async(req, res, next) => {
+  try {
+    let logs = await getLogs();
+    res.json({
+      logs,
+      status: 200
+    });
+  } catch(err) {
+    console.log(err)
+    next(new Error('Something went wrong'));
+  }
 });
 
 app.use((error, req, res, next) => {
   console.log(error)
+  if(!error.status || error.status == 500) {
+    return res.status(500).json({
+      message: error.message,
+      status: 500
+    });
+  }
   res.json({
       message: error.message,
-      status: error.status || 500
+      status: error.status
   });
 });
 
@@ -114,6 +180,17 @@ app.use(express.static('public'))
 app.use('*', express.static('public'))
 
 const server  = http.createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"]
+  }
+});
+
+io.of('/logs').on("connection", (socket) => {
+  console.log(socket.id);
+  emitLogs(socket);
+});
 
 server.listen(PORT, IP, () => {
   console.log(`bot listening at http://${IP}:${PORT}`);

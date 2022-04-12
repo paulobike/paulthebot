@@ -1,20 +1,38 @@
 const EventEmitter = require("events");
+const db = require("./dataStore");
+const logger = require('./logger');
 
 let priceEmitter = new EventEmitter();
 
 async function loadPairs (binance, setPairs) {
-    try {
-      let levs = await binance.futuresLeverageBracket();
-      let pairs = [];
-      levs.forEach(e => {
-        if(e.brackets[0].initialLeverage >= 50) {
-          pairs.push({symbol: e.symbol, price: '', volume: '', fiveMinsVol: 0, inTrade: false});
-        }      
-      });
-      setPairs(pairs);
-    } catch (err) {
-      console.log(err)
-    }
+      return new Promise((resolve, reject) => {
+      try {
+        db.pairs.find({},  async (err, documents) => {
+          if(err) {
+            throw err;
+          }
+          let levs = await binance.futuresLeverageBracket();
+          let pairs = [];
+          documents.forEach(document => {
+            let pair = levs.find(e => e.symbol === document.symbol);
+            if(pair) {
+              pairs.push({
+                symbol: pair.symbol, price: 0, 
+                leverage: pair.brackets.find(e => e.bracket == 1).initialLeverage
+              });
+            } 
+          });
+          console.log('LOADED PAIRS:', pairs);
+          logger.log('LOADED PAIRS ' + pairs.reduce((p,c,i) => p + c.symbol + ', ', ''));
+          setPairs(pairs);
+          resolve();
+        })
+        } catch (err) {
+          console.log(err)
+          reject(err)
+        }
+      })
+      
     
   }
   
@@ -23,9 +41,10 @@ async function loadPairs (binance, setPairs) {
     savedPairs.forEach(pair => {
       let current = data.find(e => e.symbol == pair.symbol); 
       if(current) {
-        pair.price = current.close;
-        if(pair.volume) pair.fiveMinsVol = Number(current.volume) + Number(pair.volume);
-        pair.volume = current.volume;
+        // UPDATE THE PRICE OF EACH PAIR
+        pair.price = Number(current.close);
+        // if(pair.volume) pair.fiveMinsVol = Number(current.volume) + Number(pair.volume);
+        // pair.volume = current.volume;
       }    
     });
     setPairs(savedPairs);
@@ -42,16 +61,39 @@ async function loadPairs (binance, setPairs) {
     }
   }
   
-  function getHottestPair (pairsParams) {
-    let eligiblePairs = pairsParams.filter(e => !e.inTrade && e.price > 0);
-    let maxVol = Math.max.apply(null, eligiblePairs.map(o => o.fiveMinsVol))
-    let hotestPair = eligiblePairs.find(e => e.fiveMinsVol == maxVol);
-    return hotestPair;
+  function getNextPair (lastTradeSymbol, getPairs) {
+    return new Promise((resolve, reject) => {
+      try {
+        db.pairs.find({inTrade: false}).sort({ symbol: -1 }).exec(async (err, eligiblePairs) => {
+          if(err) {
+            throw err;
+          }
+
+          if(lastTradeSymbol) {
+            let lastTradeIndex = eligiblePairs.findIndex(e => e.symbol == lastTradeSymbol);
+            let nextTradePair = eligiblePairs[lastTradeIndex + 1];
+            if(!nextTradePair) nextTradePair = eligiblePairs[0];
+            let savedEquivalent = getPairs().find(e => e.symbol == nextTradePair.symbol);
+            nextTradePair.price = savedEquivalent.price;
+            nextTradePair.leverage = savedEquivalent.leverage;
+            resolve(nextTradePair);
+          } else {
+            let nextTradePair = eligiblePairs[0];
+            let savedEquivalent = getPairs().find(e => e.symbol == nextTradePair.symbol);
+            nextTradePair.price = savedEquivalent.price;
+            nextTradePair.leverage = savedEquivalent.leverage;
+            resolve(nextTradePair);
+          }
+        });
+      } catch(err) {
+        resolve(null);
+      }
+    });
   }
 
   module.exports = {
       loadPairs,
       listenForPairChange,
-      getHottestPair,
+      getNextPair,
       priceEmitter
   };
