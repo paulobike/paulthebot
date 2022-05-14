@@ -93,6 +93,11 @@ function trade () {
   vars.tradeIntervalHandle = setInterval(async () => {
   // let tradeInterval = 1000*5;
   // vars.tradeIntervalHandle = setTimeout(async () => {
+
+    // HOLD INTERVAL HANDLE WITHIN EACH CALLBACK
+    let tradeIntervalHandle = vars.tradeIntervalHandle;
+    // STOP THE TRADE IF ISRUNNING IS FALSE
+    if(vars.isRunning == false) return;
     // GET THE NEXT PAIR TO TRADE
     let nextPair = await getNextPair(vars.lastTradeSymbol, getPairs);
     console.log(`PREPARING TO TRADE ${nextPair.symbol} AT $${nextPair.price}=> LEVERAGE: ${nextPair.leverage}`);
@@ -104,7 +109,6 @@ function trade () {
     let price = Number.parseFloat(nextPair.price);
     let leverageReq;
     let leverage = nextPair.leverage;
-    // leverage = 20;
 
     if(!price || !leverage) {
       console.log('SKIPPING TRADE DUE TO NO PRICE OR LEVERAGE LOADED FOR PAIR');
@@ -132,8 +136,8 @@ function trade () {
         return sleep();
       }
       let quantity = (opts.tradeMargin / price) * leverage;
-      let stopPrice = (0.8 * price) / leverage;
-      quantity = Number(quantity.toFixed(2));
+      let stopPrice = (0.67 * price) / leverage;
+      quantity = Number(quantity.toFixed(3));
       console.log(`TRADING ${symbol} AT $${price}=> QUANTITY: ${quantity}, S/L: ± $${stopPrice}, LEVERAGE: ${leverage}`)
       logger.log(`TRADING ${symbol} AT $${price}=> QUANTITY: ${quantity}, S/L: ± $${stopPrice}, LEVERAGE: ${leverage}`)
       let orders = await createOrder(symbol, quantity, stopPrice, price);
@@ -170,13 +174,13 @@ function trade () {
             let cancel = index == 0 ? await binance1.futuresCancel(symbol, {origClientOrderId: stopIds[1]}):
             await binance.futuresCancel(symbol, {origClientOrderId: stopIds[0]});
             console.log(cancel);
-            const finalStopChange = (0.7 * price) / leverage;
-            const takeProfitChange = (1 * price) / leverage;
-            let finalStop = index == 0 ? String((price - finalStopChange).toFixed(2)) 
-            : String((price + finalStopChange).toFixed(2));
+            const finalStopChange = (0.57 * price) / leverage;
+            const takeProfitChange = (0.93 * price) / leverage;
+            let finalStop = index == 0 ? String((price - finalStopChange).toFixed(3)) 
+            : String((price + finalStopChange).toFixed(3));
 
-            let takeProfit = index == 0 ? String((price - takeProfitChange).toFixed(2)) 
-            : String((price + takeProfitChange).toFixed(2)) ;
+            let takeProfit = index == 0 ? String((price - takeProfitChange).toFixed(3)) 
+            : String((price + takeProfitChange).toFixed(3)) ;
             console.log('FINAL STAGE STOP LOSS & TAKE PROFIT: ', finalStop, takeProfit)
             logger.log('FINAL STAGE STOP LOSS & TAKE PROFIT: ', finalStop, takeProfit)
             const final = await Promise.all([
@@ -217,12 +221,22 @@ function trade () {
               outcome = 'profit'
             }
 
-            // Terminate all socket listeners
+            // Terminate all socket listeners if they're no current running trades
             if(vars.isRunning == false) {
-              let subs = binance.futuresSubscriptions();
-              Object.keys(subs).forEach(sub => {
-                binance.futuresTerminate(sub);
-              });              
+              db.pairs.find({inTrade: true},  async (err, documents) => {
+                if(err) {
+                  console.log(symbol + ' POSSIBLE ERROR IN GRACEFUL SLEEPING');
+                  return logger.log(symbol + ' POSSIBLE ERROR IN GRACEFUL SLEEPING');
+                }
+                if(documents.length < 1) {
+                  let subs = binance.futuresSubscriptions();
+                  Object.keys(subs).forEach(sub => {
+                    binance.futuresTerminate(sub);
+                  });
+                  clearInterval(tradeIntervalHandle);
+                }
+              })
+              
             }
 
             let tradeData = {
@@ -265,12 +279,12 @@ async function createOrder (symbol, quantity, stopPrice, price) {
   let longOpts = {
     type: "STOP_MARKET",
     closePosition: "true",
-    stopPrice: String((price - stopPrice).toFixed(2))
+    stopPrice: String((price - stopPrice).toFixed(3))
   }
   let shortOpts = {
     type: "STOP_MARKET",
     closePosition: "true",
-    stopPrice: String((price + stopPrice).toFixed(2))
+    stopPrice: String((price + stopPrice).toFixed(3))
   };
   const buy1 = binance.futuresMarketBuy;
   const buy2 = binance1.futuresMarketBuy;
@@ -334,7 +348,6 @@ const init = async () => {
 const sleep = async () => {
   console.log('ZZZ...');
   logger.log('ZZZ...');
-  clearInterval(vars.tradeIntervalHandle);
   vars.isRunning = false;
 }
 
