@@ -144,6 +144,7 @@ function trade () {
       if(!orders.longOrder.id || !orders.shortOrder.id ||
         !orders.longOrder.stopId || !orders.shortOrder.stopId) {
         binance.futuresCancelAll( symbol );
+        binance1.futuresCancelAll( symbol );
         throw new Error('ERROR OCCURED IN CREATING INITIAL ORDER');
       }
       db.pairs.update({ symbol }, { $set: { inTrade: true } }, (err) => {
@@ -292,7 +293,6 @@ async function createOrder (symbol, quantity, stopPrice, price) {
   const sell2 = binance1.futuresMarketSell;
   const orders = await Promise.all([buy1(symbol, String(quantity)), sell2(symbol, String(quantity))]);
   const stopOrders = await Promise.all([sell1(symbol, null, longOpts), buy2(symbol, null, shortOpts) ])
-  
   // In trade
   let allPairs = getPairs();
   allPairs.forEach(e => {
