@@ -142,7 +142,7 @@ function trade () {
       quantity = Number(quantity.toFixed(quantityPrecision));
       console.log(`TRADING ${symbol} AT $${price}=> QUANTITY: ${quantity}, S/L: ± $${stopPrice}, LEVERAGE: ${leverage}`)
       logger.log(`TRADING ${symbol} AT $${price}=> QUANTITY: ${quantity}, S/L: ± $${stopPrice}, LEVERAGE: ${leverage}`)
-      let orders = await createOrder(symbol, quantity, stopPrice, price);
+      let orders = await createOrder(symbol, quantity, stopPrice, price, pricePrecision, quantityPrecision);
       if(!orders.longOrder.id || !orders.shortOrder.id ||
         !orders.longOrder.stopId || !orders.shortOrder.stopId) {
         binance.futuresCancelAll( symbol );
@@ -277,7 +277,7 @@ function trade () {
 /**
  *  Creating an order
  */
-async function createOrder (symbol, quantity, stopPrice, price) {
+async function createOrder (symbol, quantity, stopPrice, price, pricePrecision, quantityPrecision) {
   console.log(symbol, quantity, stopPrice, price);
   let longOpts = {
     type: "STOP_MARKET",
