@@ -109,6 +109,8 @@ function trade () {
     let price = Number.parseFloat(nextPair.price);
     let leverageReq;
     let leverage = nextPair.leverage;
+    let pricePrecision = nextPair.pricePrecision;
+    let quantityPrecision = nextPair.quantityPrecision;
 
     if(!price || !leverage) {
       console.log('SKIPPING TRADE DUE TO NO PRICE OR LEVERAGE LOADED FOR PAIR');
@@ -137,7 +139,7 @@ function trade () {
       }
       let quantity = (opts.tradeMargin / price) * leverage;
       let stopPrice = (0.67 * price) / leverage;
-      quantity = Number(quantity.toFixed(3));
+      quantity = Number(quantity.toFixed(quantityPrecision));
       console.log(`TRADING ${symbol} AT $${price}=> QUANTITY: ${quantity}, S/L: ± $${stopPrice}, LEVERAGE: ${leverage}`)
       logger.log(`TRADING ${symbol} AT $${price}=> QUANTITY: ${quantity}, S/L: ± $${stopPrice}, LEVERAGE: ${leverage}`)
       let orders = await createOrder(symbol, quantity, stopPrice, price);
@@ -177,11 +179,11 @@ function trade () {
             console.log(cancel);
             const finalStopChange = (0.57 * price) / leverage;
             const takeProfitChange = (0.93 * price) / leverage;
-            let finalStop = index == 0 ? String((price - finalStopChange).toFixed(3)) 
-            : String((price + finalStopChange).toFixed(3));
+            let finalStop = index == 0 ? String((price - finalStopChange).toFixed(pricePrecision)) 
+            : String((price + finalStopChange).toFixed(pricePrecision));
 
-            let takeProfit = index == 0 ? String((price - takeProfitChange).toFixed(3)) 
-            : String((price + takeProfitChange).toFixed(3)) ;
+            let takeProfit = index == 0 ? String((price - takeProfitChange).toFixed(pricePrecision)) 
+            : String((price + takeProfitChange).toFixed(pricePrecision)) ;
             console.log('FINAL STAGE STOP LOSS & TAKE PROFIT: ', finalStop, takeProfit)
             logger.log('FINAL STAGE STOP LOSS & TAKE PROFIT: ', finalStop, takeProfit)
             const final = await Promise.all([
@@ -280,12 +282,12 @@ async function createOrder (symbol, quantity, stopPrice, price) {
   let longOpts = {
     type: "STOP_MARKET",
     closePosition: "true",
-    stopPrice: String((price - stopPrice).toFixed(3))
+    stopPrice: String((price - stopPrice).toFixed(pricePrecision))
   }
   let shortOpts = {
     type: "STOP_MARKET",
     closePosition: "true",
-    stopPrice: String((price + stopPrice).toFixed(3))
+    stopPrice: String((price + stopPrice).toFixed(pricePrecision))
   };
   const buy1 = binance.futuresMarketBuy;
   const buy2 = binance1.futuresMarketBuy;

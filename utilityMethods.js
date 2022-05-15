@@ -11,14 +11,17 @@ async function loadPairs (binance, setPairs) {
           if(err) {
             throw err;
           }
-          let levs = await binance.futuresLeverageBracket();
+          let [levs, info] = await Promise.all([binance.futuresLeverageBracket(), binance.futuresExchangeInfo()]);
           let pairs = [];
           documents.forEach(document => {
             let pair = levs.find(e => e.symbol === document.symbol);
             if(pair) {
+              let pairInfo = info.symbols.find(e => e.symbol == pair.symbol)
               pairs.push({
                 symbol: pair.symbol, price: 0, 
-                leverage: pair.brackets.find(e => e.bracket == 1).initialLeverage
+                leverage: pair.brackets.find(e => e.bracket == 1).initialLeverage,
+                pricePrecision: pairInfo.pricePrecision,
+                quantityPrecision: pairInfo.quantityPrecision 
               });
             } 
           });
@@ -76,12 +79,16 @@ async function loadPairs (binance, setPairs) {
             let savedEquivalent = getPairs().find(e => e.symbol == nextTradePair.symbol);
             nextTradePair.price = savedEquivalent.price;
             nextTradePair.leverage = savedEquivalent.leverage;
+            nextTradePair.pricePrecision = savedEquivalent.pricePrecision;
+            nextTradePair.quantityPrecision = savedEquivalent.quantityPrecision;
             resolve(nextTradePair);
           } else {
             let nextTradePair = eligiblePairs[0];
             let savedEquivalent = getPairs().find(e => e.symbol == nextTradePair.symbol);
             nextTradePair.price = savedEquivalent.price;
             nextTradePair.leverage = savedEquivalent.leverage;
+            nextTradePair.pricePrecision = savedEquivalent.pricePrecision;
+            nextTradePair.quantityPrecision = savedEquivalent.quantityPrecision;
             resolve(nextTradePair);
           }
         });
